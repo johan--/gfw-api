@@ -34,6 +34,7 @@ from gfw import countries
 from gfw import stories
 from gfw import pubsub
 from gfw import wdpa
+from gfw import truth
 from appengine_config import runtime_config
 from hashlib import md5
 from google.appengine.api import mail
@@ -43,6 +44,9 @@ from google.appengine.ext import ndb
 
 class Entry(ndb.Model):
     value = ndb.TextProperty()
+
+class TruthEntry(ndb.Model):
+    value = ndb.BlobProperty()
 
 
 # Countries API route
@@ -61,14 +65,14 @@ GET_STORY = r'/stories/<id:\d+>'
 class BaseApi(webapp2.RequestHandler):
     """Base request handler for API."""
 
-    def _send_response(self, data, error=None):
+    def _send_response(self, data, error=None, ctype='application/json'):
         """Sends supplied result dictionnary as JSON response."""
         self.response.headers.add_header("Access-Control-Allow-Origin", "*")
         self.response.headers.add_header(
             'Access-Control-Allow-Headers',
             'Origin, X-Requested-With, Content-Type, Accept')
         self.response.headers.add_header('charset', 'utf-8')
-        self.response.headers["Content-Type"] = "application/json"
+        self.response.headers["Content-Type"] = ctype
         if error:
             self.response.set_status(400)
         if not data:
@@ -280,6 +284,36 @@ class PubSubApi(BaseApi):
             self._send_error()
 
 
+class TruthApi(BaseApi):
+
+    def _send(self, content):
+        self.response.headers.add_header("Access-Control-Allow-Origin", "*")
+        self.response.headers.add_header(
+            'Access-Control-Allow-Headers',
+            'Origin, X-Requested-With, Content-Type, Accept')
+        self.response.headers["Content-Type"] = "image/png"
+        self.response.out.write(content)
+
+    def get(self):
+        try:
+            params = self._get_params()
+            #rid = self._get_id(params)
+            #entry = TruthEntry.get_by_id(rid)
+            #if not entry or params.get('bust'):
+            result = truth.find(params)
+                #if result:
+                #    entry = Entry(id=rid, value=result.content)
+                #    entry.put()
+            self._send(result.content)
+        except Exception, error:
+            name = error.__class__.__name__
+            trace = traceback.format_exc()[:500]
+            msg = 'Truth failure: %s: %s' % \
+                (name, error)
+            monitor.log(self.request.url, msg, error=trace,
+                        headers=self.request.headers)
+
+
 routes = [
     webapp2.Route(COUNTRY_ROUTE, handler=CountryApi,
                   handler_method='get'),
@@ -311,7 +345,10 @@ routes = [
                   methods=['POST']),
     webapp2.Route(r'/publish', handler=PubSubApi,
                   handler_method='publish',
-                  methods=['POST'])
+                  methods=['POST']),
+
+    webapp2.Route('/truth', handler=TruthApi,
+                  handler_method='get'),
 ]
 
 handlers = webapp2.WSGIApplication(routes, debug=common.IS_DEV)
