@@ -105,7 +105,7 @@ def _boom_hammer(lat, lon, h, w, date, res, asset, fmt):
     loc = 'LANDSAT/%s' % image_id
 
     input = ee.Image(loc)
-    rgb = input.select("B4","B3","B2")
+    rgb = input.select("B6","B5","B4")
     pan = input.select("B8")
     sharp = hsvpan(rgb, pan)
 
