@@ -26,25 +26,18 @@ import datetime
 
 from google.appengine.api import urlfetch
 
-# def cloudMask(img):
-#     # 61440 = Cloudy (high probability) Cirrus
-#     # 53248 = Cloudy (high probability) Non-Cirrus
-#     # 28672 = Cloudy (low probability) Cirrus
-#     quality = img.select('BQA')
-#     cloud_hc = quality.eq(61440)
-#     cloud_hn = quality.eq(53248)
-#     cloud_lc = quality.eq(28672)
-#     masked_image = img.mask()
-#     # .and(cloud_hc.or(cloud_hn).or(cloud_lc).not())
-#     logging.info(dir(masked_image))
-#     return img.mask(masked_image)
 
-
-# VizParams = 
-
-# var image2 = collection.median().clip(polygon);
-# collectionMasked = collection.map(maskL8);
-# var image3 = collectionMasked.median().clip(polygon);
+def cloudMask(img):
+    """Returns an image with cloudy pixels masked out"""
+    # 61440 = Cloudy (high probability) Cirrus
+    # 53248 = Cloudy (high probability) Non-Cirrus
+    # 28672 = Cloudy (low probability) Cirrus
+    quality = img.select('BQA')
+    cloud_hc = quality.eq(61440)
+    cloud_hn = quality.eq(53248)
+    cloud_lc = quality.eq(28672)
+    masked_image = img.mask().And(cloud_hc.Or(cloud_hn).Or(cloud_lc).Not())
+    return img.mask(masked_image)
 
 
 def createBox(lon, lat, w, h, ccw = True):
@@ -87,6 +80,18 @@ def landsatID(alert_date, coords, offset_days=30):
     return desc.getInfo()['features'][0]['id']
 
 
+def landsatMedian(alert_date, coords, offset_days=90):
+    """Returns the median of all images within 90 days of the supplied
+    alert for the given bounding box. 
+    """
+
+    d = datetime.datetime.strptime(alert_date, '%Y-%m-%d')
+    begin_date = d - datetime.timedelta(days=offset_days)
+    poly = ee.Feature.Polygon(coords)
+    coll = ee.ImageCollection('LANDSAT/LC8_L1T_TOA').filterDate(begin_date, alert_date)
+    clipped = coll.map(lambda x: x.clip(poly))
+    return clipped.median()
+
 def _boom_hammer(lat, lon, h, w, date, res, asset, fmt):
     """Return URL to Earth Engine results for supplied params dictionary.
 
@@ -104,12 +109,12 @@ def _boom_hammer(lat, lon, h, w, date, res, asset, fmt):
     image_id = landsatID(date, coords)
     loc = 'LANDSAT/%s' % image_id
 
-    input = ee.Image(loc)
+    input = cloudMask(ee.Image(loc)) # TODO: Should we use a cloud masking algorithm?
     rgb = input.select("B6","B5","B4")
     pan = input.select("B8")
     sharp = hsvpan(rgb, pan)
 
-    vis_params = {'min':0.01, 'max':0.5, 'gamma':1.2}
+    vis_params = {'min':0.01, 'max':0.5, 'gamma':1.7}
     visual_image = sharp.visualize(**vis_params)
     params = {'scale':30, 'crs':'EPSG:4326', 'region':str(coords)}
     url = visual_image.getThumbUrl(params)
