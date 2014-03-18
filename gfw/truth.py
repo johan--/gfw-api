@@ -27,11 +27,20 @@ import datetime
 from google.appengine.api import urlfetch
 
 
-def cloudMask(img):
-    """Returns an image with cloudy pixels masked out"""
-    # 61440 = Cloudy (high probability) Cirrus
-    # 53248 = Cloudy (high probability) Non-Cirrus
-    # 28672 = Cloudy (low probability) Cirrus
+def _cloud_mask(img):
+    """Returns a masked image, with clouds filtered out
+
+    Args:
+      img: GEE Landsat 8 image instance
+
+    Note that the following values in the 'BQA' quality band indicate
+    different types of clouds and confidence:
+
+    61440 = Cloudy (high probability) Cirrus
+    53248 = Cloudy (high probability) Non-Cirrus
+    28672 = Cloudy (low probability) Cirrus
+
+    """
     quality = img.select('BQA')
     cloud_hc = quality.eq(61440)
     cloud_hn = quality.eq(53248)
@@ -40,10 +49,16 @@ def cloudMask(img):
     return img.mask(masked_image)
 
 
-def createBox(lon, lat, w, h, ccw = True):
-    """Returns the coordinates of the corners of the box around the
-    supplied latitude and longitude of the centroid, with the width
-    and height of the box equal to `h` and `w` in meters.
+def _create_box(lon, lat, w, h):
+    """Returns the coordinates of the corners of a box around the with
+    the supplied centroid (lon, lat) and dimensions (width, height).
+    Counter-clockwise.
+
+    Args:
+      lon: longitude (degrees)
+      lat: latitude (degrees)
+      w: width of box (meters)
+      h: height of box (meters)
 
     """
     h_deg = (h / 2) / (60.* 1602.) 
@@ -56,60 +71,79 @@ def createBox(lon, lat, w, h, ccw = True):
     return coords
 
 
-def hsvpan(rgb, gray):
-    """Pan-sharpen Landsat 8."""
-    huesat = rgb.rgbtohsv().select(['hue', 'saturation'])
+def _hsvpan(color, gray):
+    """Returns a pan-sharpened Landsat 8 image
+      
+    Args:
+      color: GEE Landsat 8 image with three color bands
+      gray: GEE Landsat 8 image at 15m resolution, gray scale
+
+    """
+    huesat = color.rgbtohsv().select(['hue', 'saturation'])
     upres = ee.Image.cat(huesat, gray).hsvtorgb()
     return upres
 
 
-def landsatID(alert_date, coords, offset_days=30):
-    """Returns the ID of the Landsat 8 image that is closest to the
-    supplied alert date within the supplied GEE-formatted polygon
+def _landsat_id(alert_date, coords, offset_days=30):
+    """Returns the Asset ID of the Landsat 8 TOA adjusted image that
+    is most recent to the supplied alert date, within the supplied
+    polygon.
+
+    Args: 
+      alert_date: A string of format 'YYYY-MM-DD'
+      coords: nested list of box coordinates, counter-clockwise
+      offset_days: integer number of days to start image search
 
     """
-
     d = datetime.datetime.strptime(alert_date, '%Y-%m-%d')
     begin_date = d - datetime.timedelta(days=offset_days)
     poly = ee.Feature.Polygon(coords)
-    coll = ee.ImageCollection('LANDSAT/LC8_L1T_TOA').filterDate(begin_date, alert_date)
-    coll = coll.filterBounds(poly)
-
-    # descending sort by acquisition time
-    desc = coll.sort('system:time_start', False).limit(1)
+    coll = ee.ImageCollection('LANDSAT/LC8_L1T_TOA')
+    filtered = coll.filterDate(begin_date, alert_date).filterBounds(poly)
+    desc = filtered.sort('system:time_start', False).limit(1)
     return desc.getInfo()['features'][0]['id']
 
 
-def landsatMedian(alert_date, coords, offset_days=90):
+def _landsat_median(alert_date, coords, offset_days=90):
     """Returns the median of all images within 90 days of the supplied
-    alert for the given bounding box. 
-    """
+    alert for the given bounding box.
 
+    Args: 
+      alert_date: A string of format 'YYYY-MM-DD'
+      coords: nested list of box coordinates, counter-clockwise
+      offset_days: integer number of days to start image search
+
+    """
     d = datetime.datetime.strptime(alert_date, '%Y-%m-%d')
     begin_date = d - datetime.timedelta(days=offset_days)
     poly = ee.Feature.Polygon(coords)
     coll = ee.ImageCollection('LANDSAT/LC8_L1T_TOA').filterDate(begin_date, alert_date)
     return coll.clip(poly).median()
 
+
 def _img_url(image_id, coords):
-    """Accepts an image_id and the coordinates for a bounding box;
-    returns the URL
+    """Returns the temporary URL of the given image within a bounding
+    box.
+
+    Args:
+      image_id: The GEE Landsat asset ID, string
+      coords: nested list of box coordinates, counter-clockwise
 
     """
     loc = 'LANDSAT/%s' % image_id
-    input = cloudMask(ee.Image(loc))
-    rgb = input.select("B6","B5","B4")
-    pan = input.select("B8")
-    sharp = hsvpan(rgb, pan)
-
+    img = ee.Image(loc)
+    color = img.select("B6","B5","B4")
+    pan = img.select("B8")
+    sharp = _hsvpan(color, pan)
     vis_params = {'min':0.01, 'max':0.5, 'gamma':1.7}
     visual_image = sharp.visualize(**vis_params)
     params = {'scale':30, 'crs':'EPSG:4326', 'region':str(coords)}
     url = visual_image.getThumbUrl(params)
     return url
 
+
 def _boom_hammer(lat, lon, h, w, date, res, asset, fmt):
-    """Return URL to Earth Engine results for supplied params dictionary.
+    """Returns a dictionary of URLs for Landsat 8 imagery, app ready.
 
     Args:
         lat - decimal latitude
@@ -119,19 +153,20 @@ def _boom_hammer(lat, lon, h, w, date, res, asset, fmt):
         date - YYYY-MM-DD
         res - desired resolution (thumb | true)
         asset - Earth Engine asset
-        fmt - desired output format (img | raw)"""
-    coords = createBox(lon, lat, w, h)
+        fmt - desired output format (img | raw)
+
+    """
+    coords = _create_box(lon, lat, w, h)
 
     def _get(d):
+        # returns image associated with datetime instance
         str_date = datetime.datetime.strftime(d, '%Y-%m-%d')
-        return _img_url(landsatID(str_date, coords), coords)
+        return _img_url(_landsat_id(str_date, coords), coords)
 
     init_date = datetime.datetime.strptime(date, '%Y-%m-%d')
-
     t_minus_one = init_date - datetime.timedelta(days=30) 
     t_minus_two = init_date - datetime.timedelta(days=60) 
     t_minus_three = init_date - datetime.timedelta(days=90) 
-
     return {'alert_date': _get(init_date), 
             't_minus_one': _get(t_minus_one), 
             't_minus_two': _get(t_minus_two), 
@@ -165,4 +200,4 @@ def find(params):
     ee.data.setDeadline(60000)
     url = _boom_hammer(**boom)
     result = _fetch_url(url)
-    return url
+    return result
