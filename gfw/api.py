@@ -22,7 +22,6 @@ import hashlib
 import json
 import random
 import re
-import os
 import copy
 import webapp2
 import monitor
@@ -40,14 +39,11 @@ from hashlib import md5
 from google.appengine.api import mail
 from google.appengine.api import taskqueue
 from google.appengine.ext import ndb
+from google.appengine.api import memcache
 
 
 class Entry(ndb.Model):
     value = ndb.TextProperty()
-
-class TruthEntry(ndb.Model):
-    value = ndb.BlobProperty()
-
 
 # Countries API route
 COUNTRY_ROUTE = r'/countries'
@@ -297,14 +293,14 @@ class TruthApi(BaseApi):
     def get(self):
         try:
             params = self._get_params()
-            #rid = self._get_id(params)
-            #entry = TruthEntry.get_by_id(rid)
-            #if not entry or params.get('bust'):
-            result = truth.find(params)
-                #if result:
-                #    entry = Entry(id=rid, value=result.content)
-                #    entry.put()
-            self._send(result.content)
+            rid = self._get_id(params)
+            entry = memcache.get(rid)
+            if not entry or params.get('bust'):
+                result = truth.find(params)
+                if result:
+                    entry = json.dumps(result, sort_keys=True)
+                    memcache.set(rid, entry)
+            self._send_response(entry)
         except Exception, error:
             name = error.__class__.__name__
             trace = traceback.format_exc()[:500]

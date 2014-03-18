@@ -89,12 +89,10 @@ def _landsat_id(alert_date, coords, offset_days=30):
     is most recent to the supplied alert date, within the supplied
     polygon.
 
-    Args: 
+    Args:
       alert_date: A string of format 'YYYY-MM-DD'
       coords: nested list of box coordinates, counter-clockwise
-      offset_days: integer number of days to start image search
-
-    """
+      offset_days: integer number of days to start image search"""
     d = datetime.datetime.strptime(alert_date, '%Y-%m-%d')
     begin_date = d - datetime.timedelta(days=offset_days)
     poly = ee.Feature.Polygon(coords)
@@ -108,16 +106,15 @@ def _landsat_median(alert_date, coords, offset_days=90):
     """Returns the median of all images within 90 days of the supplied
     alert for the given bounding box.
 
-    Args: 
+    Args:
       alert_date: A string of format 'YYYY-MM-DD'
       coords: nested list of box coordinates, counter-clockwise
-      offset_days: integer number of days to start image search
-
-    """
+      offset_days: integer number of days to start image search"""
     d = datetime.datetime.strptime(alert_date, '%Y-%m-%d')
     begin_date = d - datetime.timedelta(days=offset_days)
     poly = ee.Feature.Polygon(coords)
-    coll = ee.ImageCollection('LANDSAT/LC8_L1T_TOA').filterDate(begin_date, alert_date)
+    coll = ee.ImageCollection('LANDSAT/LC8_L1T_TOA').filterDate(
+        begin_date, alert_date)
     return coll.clip(poly).median()
 
 
@@ -127,17 +124,15 @@ def _img_url(image_id, coords):
 
     Args:
       image_id: The GEE Landsat asset ID, string
-      coords: nested list of box coordinates, counter-clockwise
-
-    """
+      coords: nested list of box coordinates, counter-clockwise"""
     loc = 'LANDSAT/%s' % image_id
     img = ee.Image(loc)
-    color = img.select("B6","B5","B4")
+    color = img.select("B6", "B5", "B4")
     pan = img.select("B8")
     sharp = _hsvpan(color, pan)
-    vis_params = {'min':0.01, 'max':0.5, 'gamma':1.7}
+    vis_params = {'min': 0.01, 'max': 0.5, 'gamma': 1.7}
     visual_image = sharp.visualize(**vis_params)
-    params = {'scale':30, 'crs':'EPSG:4326', 'region':str(coords)}
+    params = {'scale': 30, 'crs': 'EPSG:4326', 'region': str(coords)}
     url = visual_image.getThumbUrl(params)
     return url
 
@@ -163,14 +158,17 @@ def _boom_hammer(lat, lon, h, w, date, res, asset, fmt):
         str_date = datetime.datetime.strftime(d, '%Y-%m-%d')
         return _img_url(_landsat_id(str_date, coords), coords)
 
+    def _d2s(d):
+        return datetime.datetime.strftime(d, '%Y-%m-%d')
+
     init_date = datetime.datetime.strptime(date, '%Y-%m-%d')
-    t_minus_one = init_date - datetime.timedelta(days=30) 
-    t_minus_two = init_date - datetime.timedelta(days=60) 
-    t_minus_three = init_date - datetime.timedelta(days=90) 
-    return {'alert_date': _get(init_date), 
-            't_minus_one': _get(t_minus_one), 
-            't_minus_two': _get(t_minus_two), 
-            't_minus_three': _get(t_minus_three)}
+    t_minus_one = init_date - datetime.timedelta(days=30)
+    t_minus_two = init_date - datetime.timedelta(days=60)
+    t_minus_three = init_date - datetime.timedelta(days=90)
+    return {_d2s(init_date): _get(init_date),
+            _d2s(t_minus_one): _get(t_minus_one),
+            _d2s(t_minus_two): _get(t_minus_two),
+            _d2s(t_minus_three): _get(t_minus_three)}
 
 
 def _params_prep(params):
@@ -198,6 +196,6 @@ def find(params):
     logging.info(boom)
     ee.Initialize(config.EE_CREDENTIALS, config.EE_URL)
     ee.data.setDeadline(60000)
-    url = _boom_hammer(**boom)
-    result = _fetch_url(url)
-    return result
+    urls = _boom_hammer(**boom)
+    boom['stack'] = urls
+    return boom
