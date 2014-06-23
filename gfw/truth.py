@@ -18,9 +18,7 @@
 """This module supports the Truth API."""
 
 import config
-import copy
 import ee
-import json
 import logging
 import datetime
 
@@ -61,19 +59,20 @@ def _create_box(lon, lat, w, h):
       h: height of box (meters)
 
     """
-    h_deg = (h / 2) / (60.* 1602.) 
-    w_deg = (w / 2) / (60.* 1602.) 
-    coords= [[lon + w_deg, lat + h_deg],
-             [lon - w_deg, lat + h_deg],
-             [lon - w_deg, lat - h_deg],
-             [lon + w_deg, lat - h_deg],
-             [lon + w_deg, lat + h_deg]]
+    h_deg = (h / 2) / (60. * 1602.)
+    w_deg = (w / 2) / (60. * 1602.)
+    coords = [
+        [lon + w_deg, lat + h_deg],
+        [lon - w_deg, lat + h_deg],
+        [lon - w_deg, lat - h_deg],
+        [lon + w_deg, lat - h_deg],
+        [lon + w_deg, lat + h_deg]]
     return coords
 
 
 def _hsvpan(color, gray):
     """Returns a pan-sharpened Landsat 8 image
-      
+
     Args:
       color: GEE Landsat 8 image with three color bands
       gray: GEE Landsat 8 image at 15m resolution, gray scale
