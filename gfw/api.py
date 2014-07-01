@@ -293,13 +293,15 @@ class TruthApi(BaseApi):
     def get(self):
         try:
             params = self._get_params()
-            rid = self._get_id(params)
-            entry = memcache.get(rid)
-            if not entry or params.get('bust'):
-                result = truth.find(params)
-                if result:
-                    entry = json.dumps(result, sort_keys=True)
-                    memcache.set(rid, entry)
+        #     rid = self._get_id(params)
+        #     entry = memcache.get(rid)
+        #     if not entry or params.get('bust'):
+        #         result = truth.find(params)
+        #         if result:
+        #             entry = json.dumps(result, sort_keys=True)
+        #             memcache.set(rid, entry)
+            result = truth.find(params)
+            entry = json.dumps(result, sort_keys=True)
             self._send_response(entry)
         except Exception, error:
             name = error.__class__.__name__
