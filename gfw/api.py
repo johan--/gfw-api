@@ -293,14 +293,14 @@ class TruthApi(BaseApi):
     def get(self):
         try:
             params = self._get_params()
-        #     rid = self._get_id(params)
+            rid = self._get_id(params)
         #     entry = memcache.get(rid)
         #     if not entry or params.get('bust'):
         #         result = truth.find(params)
         #         if result:
         #             entry = json.dumps(result, sort_keys=True)
         #             memcache.set(rid, entry)
-            result = truth.find(params)
+            result = truth.find(params, rid)
             entry = json.dumps(result, sort_keys=True)
             self._send_response(entry)
         except Exception, error:
@@ -346,6 +346,8 @@ routes = [
                   methods=['POST']),
 
     webapp2.Route('/truth', handler=TruthApi,
+                  handler_method='get'),
+    webapp2.Route('/truth/images', handler=truth.GCSServingHandler,
                   handler_method='get'),
 ]
 

@@ -22,7 +22,69 @@ import ee
 import logging
 import datetime
 
+from gfw.common import APP_BASE_URL
+import cloudstorage as gcs
+
 from google.appengine.api import urlfetch
+from google.appengine.ext.webapp import blobstore_handlers
+from google.appengine.ext import ndb
+from google.appengine.ext import blobstore
+
+
+GCS_BUCKET = '/gfw-apis-truth'
+
+
+class TruthCache(ndb.Model):
+    urls = ndb.StringProperty(repeated=True)
+    result = ndb.JsonProperty()
+
+
+def get_cached_url(blob_key):
+    return '%s/truth/images?blob_key=%s' % (APP_BASE_URL, blob_key)
+
+
+def get_url_content(url):
+    rpc = urlfetch.create_rpc(deadline=60)
+    urlfetch.make_fetch_call(rpc, url, method='GET')
+    result = rpc.get_result()
+    return result.content
+
+
+def cache_boom(boom, rid):
+    stack = boom['stack']
+    urls = dict(final_image=stack['final_image'],
+                reference_image=stack['reference_image'])
+
+    for key, url in urls.iteritems():
+        content = get_url_content(url)
+        filename = '/%s.jpg' % url.split('thumbid=')[1]
+        blob_key = gcs_create(content, filename)
+        boom['stack'][key] = get_cached_url(blob_key)
+
+    TruthCache(id=rid, result=boom).put()
+    return boom
+
+
+def gcs_path(filename):
+    """Return GCS path for supplied filename or None if it doesn't exist."""
+    try:
+        path = '/'.join([GCS_BUCKET, filename])
+        gcs.stat(path)
+        return path
+    except:
+        return None
+
+
+def gcs_create(value, filename):
+    """Create GCS file with supplied value, filename, and content type."""
+    path = ''.join([GCS_BUCKET, filename])
+    blobstore_filename = '/gs%s' % path
+
+    with gcs.open(path, 'w', content_type='image/jpeg') as f:
+        f.write(value)
+
+    return blobstore.create_gs_key(blobstore_filename)
+
 
 def pixelCloudScore(img):
     """Calculate the cloud score for the supplied L8 image"""
@@ -238,15 +300,19 @@ def _fetch_url(url):
     return rpc.get_result()
 
 
-def find(params):
+def find(params, rid):
     """Find and return truth from supplied params."""
+    cache = TruthCache.get_by_id(rid)
+    if cache:
+        return cache.result
+
     boom = _params_prep(params)
-    logging.info(boom)
     ee.Initialize(config.EE_CREDENTIALS, config.EE_URL)
     ee.data.setDeadline(60000)
     urls = _boom_hammer(**boom)
     boom['stack'] = urls
-    return boom
+    kaboom = cache_boom(boom, rid)
+    return kaboom
 
 coords = [
     [101.095, 1.505],
@@ -257,3 +323,9 @@ coords = [
 ]
 
 start_date = '2014-09-30'
+
+
+class GCSServingHandler(blobstore_handlers.BlobstoreDownloadHandler):
+    def get(self):
+        blob_key = self.request.get('blob_key')
+        self.send_blob(blob_key)
