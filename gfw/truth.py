@@ -117,7 +117,13 @@ def pixelCloudScore(img):
 def cloudScore(img):
     pix = pixelCloudScore(img)
     binary = pix.gt(0.5)
-    num = binary.reduceRegion(ee.Reducer.mean(), scale=30, crs='EPSG:4326')
+
+    num = binary.reduceRegion(
+        reducer=ee.Reducer.mean(), 
+        geometry=pix.geometry(), 
+        scale=30, 
+        crs='EPSG:4326'
+    )
     return num.getInfo()['constant']
 
 
