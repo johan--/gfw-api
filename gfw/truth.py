@@ -119,9 +119,9 @@ def cloudScore(img):
     binary = pix.gt(0.5)
 
     num = binary.reduceRegion(
-        reducer=ee.Reducer.mean(), 
-        geometry=pix.geometry(), 
-        scale=30, 
+        reducer=ee.Reducer.mean(),
+        geometry=pix.geometry(),
+        scale=30,
         crs='EPSG:4326'
     )
     return num.getInfo()['constant']
@@ -165,7 +165,7 @@ def genReferenceImage(location, polygon):
     rgb = img.select('B6', 'B5', 'B4')
     pan = img.select('B8')
     sharp = hsvpan(rgb, pan)
-    return dict(img=sharp, score=cloudScore(img.clip(polygon)))
+    return dict(img=sharp, score=None)
 
 
 def _create_box(lon, lat, w, h):
