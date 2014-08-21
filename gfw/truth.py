@@ -261,7 +261,7 @@ def _get_reference_image(dater, coords, offset_days=180):
     url = visual_image.getThumbUrl(params)
     return dict(
         reference_image=url,
-        reference_score=cloudScore(comp.clip(poly))
+        reference_score=None
         )
 
 
