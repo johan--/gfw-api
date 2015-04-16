@@ -66,7 +66,7 @@ def create(params):
                  location='', geom='', media='[]', table=TABLE)
     props.update(params)
     for key in ['details', 'title', 'name', 'email', 'location']:
-        props[key] = props[key].encode('utf-8')
+        props[key] = props[key].encode('utf-8').replace("'", "''")
     if not props.get('date'):
         props['date'] = str(datetime.datetime.now())
     props['geom'] = json.dumps(props['geom'])
