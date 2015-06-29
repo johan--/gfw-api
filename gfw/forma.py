@@ -20,7 +20,7 @@
 import json
 from gfw import cdb
 
-FORMA_TABLE = 'forma_api'
+FORMA_TABLE = 'forma250_all'
 
 ISO_SUB_SQL = """SELECT SUM(count) as value, 'FORMA' as name, 'alerts' as unit,
   '500 meters' as resolution

@@ -26,7 +26,7 @@ class FormaSql(Sql):
     WORLD = """
         SELECT COUNT(f.*) AS value
             {additional_select}
-        FROM forma_api f
+        FROM forma250_all f
         WHERE f.date >= '{begin}'::date
               AND f.date <= '{end}'::date
               AND ST_INTERSECTS(
@@ -37,7 +37,7 @@ class FormaSql(Sql):
     ISO = """
         SELECT COUNT(f.*) AS value
             {additional_select}
-        FROM forma_api f
+        FROM forma250_all f
         WHERE f.date >= '{begin}'::date
               AND f.date <= '{end}'::date
               AND f.iso = UPPER('{iso}')
@@ -46,7 +46,7 @@ class FormaSql(Sql):
     ID1 = """
         SELECT COUNT(f.*) AS value
             {additional_select}
-        FROM forma_api f
+        FROM forma250_all f
         INNER JOIN (
             SELECT *
             FROM gadm2
@@ -60,7 +60,7 @@ class FormaSql(Sql):
     WDPA = """
         SELECT COUNT(f.*) AS value
             {additional_select}
-        FROM forma_api f, (SELECT * FROM wdpa_protected_areas WHERE wdpaid={wdpaid}) AS p
+        FROM forma250_all f, (SELECT * FROM wdpa_protected_areas WHERE wdpaid={wdpaid}) AS p
         WHERE ST_Intersects(f.the_geom, p.the_geom)
               AND f.date >= '{begin}'::date
               AND f.date <= '{end}'::date"""
@@ -68,7 +68,7 @@ class FormaSql(Sql):
     USE = """
         SELECT COUNT(f.*) AS value
             {additional_select}
-        FROM {use_table} u, forma_api f
+        FROM {use_table} u, forma250_all f
         WHERE u.cartodb_id = {pid}
               AND ST_Intersects(f.the_geom, u.the_geom)
               AND f.date >= '{begin}'::date
@@ -76,7 +76,7 @@ class FormaSql(Sql):
 
     LATEST = """
         SELECT DISTINCT date 
-        FROM forma_api
+        FROM forma250_all
         WHERE date IS NOT NULL
         ORDER BY date DESC
         LIMIT {limit}"""

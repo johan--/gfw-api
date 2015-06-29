@@ -40,7 +40,7 @@ class CountrySql(object):
         FROM gfw2_countries AS countries
         LEFT OUTER JOIN (
           SELECT COUNT(*) AS count, iso
-          FROM forma_api
+          FROM forma250_all
           WHERE date >= now() - INTERVAL '{interval}'
           GROUP BY iso)
         AS alerts ON alerts.iso = countries.iso
@@ -97,7 +97,7 @@ class CountrySql(object):
 
     FORMA = """
         SELECT date_trunc('month', date) AS date, COUNT(*) AS alerts
-        FROM forma_api
+        FROM forma250_all
         WHERE iso = UPPER('{iso}')
         GROUP BY date_trunc('month', date)
         ORDER BY date_trunc('month', date) ASC"""
