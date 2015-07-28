@@ -279,11 +279,11 @@ def _classify_request(path):
     elif re.match(r'forest-change/%s/admin/ifl/[A-z]{3,3}$' % dataset, path):
         rtype = 'ifl'
     elif re.match(r'forest-change/%s/admin/ifl/[A-z]{3,3}/\d+$' % dataset, path):
-        rtype = 'ifl_id1'  
+        rtype = 'ifl_id1'
     elif re.match(r'forest-change/%s/ifl/[A-z]{3,3}$' % dataset, path):
         rtype = 'ifl'
     elif re.match(r'forest-change/%s/ifl/[A-z]{3,3}/\d+$' % dataset, path):
-        rtype = 'ifl_id1'  
+        rtype = 'ifl_id1'
     elif re.match(r'forest-change/%s/admin/[A-z]{3,3}$' % dataset, path):
         rtype = 'iso'
     elif re.match(r'forest-change/%s/admin/[A-z]{3,3}/\d+$' % dataset, path):
@@ -295,7 +295,7 @@ def _classify_request(path):
     elif re.match(r'forest-change/%s/wdpa/\d+$' % dataset, path):
         rtype = 'wdpa'
     elif re.match(r'forest-change/%s/use/[A-z]+/\d+$' % dataset, path):
-        rtype = 'use' 
+        rtype = 'use'
 
     return dataset, rtype
 
