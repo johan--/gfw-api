@@ -197,7 +197,7 @@ PARAMS = {
         'id1': ['period', 'download', 'dev', 'bust'],
         'wdpa': ['period', 'download', 'dev', 'bust'],
         'use': ['period', 'download', 'dev', 'bust'],
-        'latest': ['bust','limit']
+        'latest': ['bust', 'limit']
     },
     'nasa-active-fires': {
         'all': ['period', 'download', 'geojson', 'dev', 'bust'],
@@ -205,7 +205,7 @@ PARAMS = {
         'id1': ['period', 'download', 'dev', 'bust'],
         'wdpa': ['period', 'download', 'dev', 'bust'],
         'use': ['period', 'download', 'dev', 'bust'],
-        'latest': ['bust','limit']
+        'latest': ['bust', 'limit']
     },
     'quicc-alerts': {
         'all': ['period', 'download', 'geojson', 'dev', 'bust'],
@@ -213,7 +213,7 @@ PARAMS = {
         'id1': ['period', 'download', 'dev', 'bust'],
         'wdpa': ['period', 'download', 'dev', 'bust'],
         'use': ['period', 'download', 'dev', 'bust'],
-        'latest': ['bust','limit']
+        'latest': ['bust', 'limit']
     },
     'imazon-alerts': {
         'all': ['period', 'download', 'geojson', 'dev', 'bust'],
@@ -221,7 +221,7 @@ PARAMS = {
         'id1': ['period', 'download', 'dev', 'bust'],
         'wdpa': ['period', 'download', 'dev', 'bust'],
         'use': ['period', 'download', 'dev', 'bust'],
-        'latest': ['bust','limit']
+        'latest': ['bust', 'limit']
     },
     'umd-loss-gain': {
         'all': ['thresh', 'geojson', 'period', 'dev', 'bust'],
@@ -238,7 +238,7 @@ PARAMS = {
         'id1': ['period', 'download', 'dev', 'bust'],
         'wdpa': ['period', 'download', 'dev', 'bust'],
         'use': ['period', 'download', 'dev', 'bust'],
-        'latest': ['bust','limit']
+        'latest': ['bust', 'limit']
     }
 }
 

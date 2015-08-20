@@ -100,7 +100,6 @@ class BaseApiTest(common.FetchBaseTest):
             self.assertEqual(r.json['params']['id1'], '2')
             self.assertEqual(200, r.status_code)
 
-
     def _testGetWdpa(self, dataset):
         path = r'/forest-change/%s/wdpa/180' % dataset
 
@@ -208,6 +207,7 @@ class UmdApiTest(BaseApiTest):
     def testGetIflSubnational(self):
         self._testGetNational('umd-loss-gain')
 
+
 class TerraiApiTest(BaseApiTest):
 
     def testGetNational(self):
@@ -249,13 +249,15 @@ class FunctionTest(unittest.TestCase):
         self.assertEqual(('forma-alerts', 'ifl'), api._classify_request(path))
 
         path = '/forest-change/forma-alerts/admin/ifl/bra/123'
-        self.assertEqual(('forma-alerts', 'ifl_id1'), api._classify_request(path))
+        self.assertEqual(
+            ('forma-alerts', 'ifl_id1'), api._classify_request(path))
 
         path = '/forest-change/forma-alerts/ifl/bra'
         self.assertEqual(('forma-alerts', 'ifl'), api._classify_request(path))
 
         path = '/forest-change/forma-alerts/ifl/bra/123'
-        self.assertEqual(('forma-alerts', 'ifl_id1'), api._classify_request(path))
+        self.assertEqual(
+            ('forma-alerts', 'ifl_id1'), api._classify_request(path))
 
         path = '/forest-change/forma-alerts/admin/bra'
         self.assertEqual(('forma-alerts', 'iso'), api._classify_request(path))
