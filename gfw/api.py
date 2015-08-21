@@ -34,6 +34,7 @@ from gfw import countries
 from gfw import stories
 from gfw import pubsub
 from gfw import wdpa
+from gfw import indicators
 from appengine_config import runtime_config
 from hashlib import md5
 from google.appengine.api import mail
@@ -57,6 +58,9 @@ CREATE_STORY = r'/stories/new'
 CREATE_STORY_EMAILS = r'/stories/email'
 GET_STORY = r'/stories/<id:\d+>'
 
+# Indicators API routes
+LIST_INDICATORS = r'/indicators'
+GET_INDICATOR_FOR_COUNTRY = r'/countries/<iso:[A-z]{3,3}>/indicators/<id:\d+>'
 
 class SubHandler(webapp2.RequestHandler):
 
@@ -290,6 +294,41 @@ class PubSubApi(BaseApi):
                         headers=self.request.headers)
             self._send_error()
 
+class IndicatorApi(BaseApi):
+    """Handler for indicators."""
+
+    def get(self):
+        try:
+            params = self._get_params()
+            rid = self._get_id(params)
+            entry = Entry.get_by_id(rid)
+            if not entry or params.get('bust') or runtime_config.get('IS_DEV'):
+                result = countries.get(params)
+                if result:
+                    entry = Entry(id=rid, value=json.dumps(result))
+                    entry.put()
+            self._send_response(entry.value if entry else None)
+        except Exception, error:
+            name = error.__class__.__name__
+            trace = traceback.format_exc()
+            msg = 'Publish failure: %s: %s' % \
+                (name, error)
+            monitor.log(self.request.url, msg, error=trace,
+                        headers=self.request.headers)
+
+    def list(self):
+        try:
+            params = self._get_params()
+            result = indicators.list(params)
+            if not result:
+                result = []
+            self._send_response(json.dumps(result))
+        except Exception, e:
+            name = e.__class__.__name__
+            msg = 'Error: Story API (%s)' % name
+            monitor.log(self.request.url, msg, error=e,
+                        headers=self.request.headers)
+
 
 routes = [
     webapp2.Route(COUNTRY_ROUTE, handler=CountryApi,
@@ -327,7 +366,11 @@ routes = [
                   methods=['POST']),
     webapp2.Route(r'/publish', handler=PubSubApi,
                   handler_method='publish',
-                  methods=['POST'])
+                  methods=['POST']),
+    webapp2.Route(LIST_INDICATORS, handler=IndicatorApi,
+                  handler_method='list'),
+    webapp2.Route(GET_INDICATOR_FOR_COUNTRY, handler=IndicatorApi,
+                  handler_method='get')
 ]
 
 handlers = webapp2.WSGIApplication(routes, debug=common.IS_DEV)
